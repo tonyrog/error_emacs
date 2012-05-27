@@ -1,0 +1,12 @@
+{application, error_emacs,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { error_emacs_app, []}},
+  {env, []}
+ ]}.
