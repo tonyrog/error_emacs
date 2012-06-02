@@ -209,7 +209,13 @@ handle_file(BeamPath, File, Line) ->
 		true ->
 		    launch_emacs(Source, Line);
 		false ->
-		    ok
+		    Source1 = filename:join([Dir1,File]),
+		    case filelib:is_regular(Source1) of
+			true ->
+			    launch_emacs(Source1, Line);
+			false ->
+			    ok
+		    end
 	    end;
 	_ ->
 	    Source = filename:join([Dir,File]),
