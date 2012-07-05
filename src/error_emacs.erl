@@ -182,22 +182,46 @@ handle_exit({_Reason, Trace}) ->
     ?info("crash: ~p trace=~p", [_Reason,Trace]),
     case Trace of
 	[] -> ok;
-	[{M,F,_A,Loc}|_] when is_atom(M), is_atom(F), is_list(Loc) ->
-	    case {proplists:get_value(file,Loc),
-		  proplists:get_value(line,Loc)} of
-		{undefined, _} -> ok;
-		{_, undefined} -> ok;
-		{File,Line} ->
-		    case code:which(M) of
-			non_existing -> ok;
-			BeamPath -> handle_file(BeamPath, File, Line)
-		    end
-	    end;
-	_ -> ok
+	_ -> find_error(Trace)
     end;
 handle_exit(_Reason) ->
     ?info("no match: ~p", [_Reason]),
     ok.
+
+%% locate error is "user" code - skip standard libraries etc
+find_error([{M,F,_A,Loc}|Tail]) when is_atom(M), is_atom(F), is_list(Loc) ->
+    case code:which(M) of
+	non_existing ->
+	    ok;
+	Path ->
+	    case lists:prefix(code:lib_dir(), Path) of
+		true ->
+		    find_error(Tail);
+		false ->
+		    case {proplists:get_value(file,Loc),
+			  proplists:get_value(line,Loc)} of
+			{undefined, _} -> ok;
+			{_, undefined} -> ok;
+			{File,Line} ->
+			    handle_file(Path, File, Line)
+		    end
+	    end
+    end;
+find_error([{M,F,_A}|Tail]) when is_atom(M), is_atom(F) ->
+    case code:which(M) of
+	non_existing ->
+	    ok;
+	Path ->
+	    case lists:prefix(code:lib_dir(), Path) of
+		true ->
+		    find_error(Tail);
+		false ->
+		    ok
+	    end
+    end;
+find_error(_) ->
+    ok.
+    
 
 handle_file(BeamPath, File, Line) ->
     Dir = filename:dirname(BeamPath),
