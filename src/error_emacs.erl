@@ -192,19 +192,16 @@ handle_exit(_Reason) ->
 find_error([{M,F,_A,Loc}|Tail]) when is_atom(M), is_atom(F), is_list(Loc) ->
     case code:which(M) of
 	non_existing ->
-	    ok;
+	    %% probably undefined function call, find caller
+	    find_error(Tail);
+	preloaded ->
+	    find_error(Tail);	    
 	Path ->
 	    case lists:prefix(code:lib_dir(), Path) of
 		true ->
 		    find_error(Tail);
 		false ->
-		    case {proplists:get_value(file,Loc),
-			  proplists:get_value(line,Loc)} of
-			{undefined, _} -> ok;
-			{_, undefined} -> ok;
-			{File,Line} ->
-			    handle_file(Path, File, Line)
-		    end
+		    handle_location(Path,Loc)
 	    end
     end;
 find_error([{M,F,_A}|Tail]) when is_atom(M), is_atom(F) ->
@@ -221,7 +218,15 @@ find_error([{M,F,_A}|Tail]) when is_atom(M), is_atom(F) ->
     end;
 find_error(_) ->
     ok.
-    
+
+handle_location(Path,Loc) ->
+    case {proplists:get_value(file,Loc),
+	  proplists:get_value(line,Loc)} of
+	{undefined, _} -> ok;
+	{_, undefined} -> ok;
+	{File,Line} ->
+	    handle_file(Path, File, Line)
+    end.
 
 handle_file(BeamPath, File, Line) ->
     Dir = filename:dirname(BeamPath),
