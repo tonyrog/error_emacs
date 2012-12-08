@@ -42,7 +42,7 @@
 
 %%-define(dbg(F,A), io:format("~s:~w: debug: "++(F)++"\n",[?MODULE,?LINE|(A)])).
 -define(dbg(F,A), ok).
-%%-define(info(F,A), io:format("~s:~w: info: "++(F)++"\n",[?MODULE,?LINE|(A)])).
+%% -define(info(F,A), io:format("~s:~w: info: "++(F)++"\n",[?MODULE,?LINE|(A)])).
 -define(info(F,A), ok).
 
 %%%===================================================================
@@ -140,6 +140,10 @@ handle_info(_Exit={'EXIT',Pid,Reason}, State) when Pid =:= State#state.pid ->
     {noreply, State1};
 handle_info({timeout,Tmr,find_shell_eval}, State) 
   when State#state.timer =:= Tmr ->
+    %% garbage_collect here to avoid that data from 'EXIT' Reason etc
+    %% get stuck for a longer time. Like magic binaries used by 
+    %% resource notifications etc.
+    garbage_collect(),
     ?dbg("error_emacs: retry to find shell eval proc", []),
     State1 = link_eval(State),
     {noreply, State1};
@@ -178,7 +182,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-handle_exit({_Reason, Trace}) ->
+handle_exit(Err={_Reason, Trace}) ->
     ?info("crash: ~p trace=~p", [_Reason,Trace]),
     case Trace of
 	[] -> ok;
