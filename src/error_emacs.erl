@@ -182,7 +182,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-handle_exit(Err={_Reason, Trace}) ->
+handle_exit({_Reason, Trace}) ->
     ?info("crash: ~p trace=~p", [_Reason,Trace]),
     case Trace of
 	[] -> ok;
