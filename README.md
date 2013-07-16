@@ -39,7 +39,7 @@ emacsclient
 The program emacsclient must be found in the path, on Mac OS X you may
 have to add
 
-    PATH=$/Applications/Emacs.app/Contents/MacOS/bin:$PATH
+    PATH=/Applications/Emacs.app/Contents/MacOS/bin:$PATH
 
 To override the default emacsclient, but only if you are using the Emacs.app
 
