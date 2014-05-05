@@ -42,7 +42,7 @@
 
 %%-define(dbg(F,A), io:format("~s:~w: debug: "++(F)++"\n",[?MODULE,?LINE|(A)])).
 -define(dbg(F,A), ok).
-%% -define(info(F,A), io:format("~s:~w: info: "++(F)++"\n",[?MODULE,?LINE|(A)])).
+%%-define(info(F,A), io:format("~s:~w: info: "++(F)++"\n",[?MODULE,?LINE|(A)])).
 -define(info(F,A), ok).
 
 %%%===================================================================
@@ -199,13 +199,17 @@ find_error([{M,F,_A,Loc}|Tail]) when is_atom(M), is_atom(F), is_list(Loc) ->
 	    %% probably undefined function call, find caller
 	    find_error(Tail);
 	preloaded ->
-	    find_error(Tail);	    
+	    find_error(Tail);
 	Path ->
-	    case lists:prefix(code:lib_dir(), Path) of
-		true ->
+	    if Loc =:= [] -> %% probably a nif
 		    find_error(Tail);
-		false ->
-		    handle_location(Path,Loc)
+	       true ->
+		    case lists:prefix(code:lib_dir(), Path) of
+			true ->
+			    find_error(Tail);
+			false ->
+			    handle_location(Path,Loc)
+		    end
 	    end
     end;
 find_error([{M,F,_A}|Tail]) when is_atom(M), is_atom(F) ->
