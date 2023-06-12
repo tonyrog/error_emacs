@@ -40,11 +40,12 @@
 	  pid      %% eval pid
 	}).
 
-%%-define(dbg(F,A), io:format("~s:~w: debug: "++(F)++"\n",[?MODULE,?LINE|(A)])).
+%% -define(dbg(F,A), io:format("~s:~w: debug: "++(F)++"\n",[?MODULE,?LINE|(A)])).
 -define(dbg(F,A), ok).
 %%-define(info(F,A), io:format("~s:~w: info: "++(F)++"\n",[?MODULE,?LINE|(A)])).
 -define(info(F,A), ok).
 
+-export([get_links/1]).
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -285,7 +286,7 @@ launch_emacs(File, Line) ->
     ok.
 
 link_eval(State) ->
-    case shell:whereis_evaluator() of
+    case whereis_evaluator() of
 	undefined ->
 	    Tmr = erlang:start_timer(1000, self(), find_shell_eval),
 	    State#state { timer = Tmr, pid = undefined };
@@ -293,4 +294,35 @@ link_eval(State) ->
 	    ?dbg("link to ~p", [EvalPid]),
 	    link(EvalPid),
 	    State#state{ timer = undefined, pid = EvalPid }
+    end.
+
+whereis_evaluator() ->
+    try shell:whereis_evaluator() of
+	Pid ->
+	    Pid
+    catch
+	error:_ ->
+	    Ps1 = get_links(group:whereis_shell()),
+	    %% erlang:display({ps1,Ps1}),
+	    case lists:keyfind(shell, 2, Ps1) of
+		false -> undefined;
+		{Eval, _} -> 
+		    erlang:display({error_emacs_eval, Eval}),
+		    Eval
+	    end
+    end.
+
+get_links(Pid) ->
+    case process_info(Pid, links) of
+	{links,Ls} ->
+	    lists:foldl(
+	      fun(P, Acc) ->
+		      try process_info(P, current_function) of
+			  {current_function,{Mod,_,_}} -> [{P, Mod}|Acc]
+		      catch
+			  error:_ -> Acc
+		      end
+	      end, [], Ls);
+	_ -> 
+	    []
     end.

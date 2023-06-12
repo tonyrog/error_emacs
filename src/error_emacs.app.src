@@ -1,7 +1,8 @@
 {application, error_emacs,
  [
-  {description, ""},
-  {vsn, "1"},
+  {description, "Direct emacs to the error line"},
+  {vsn, git},
+  {modules, ["@@MODULES@@"]},
   {registered, []},
   {applications, [
                   kernel,
