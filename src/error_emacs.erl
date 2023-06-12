@@ -307,7 +307,7 @@ whereis_evaluator() ->
 	    case lists:keyfind(shell, 2, Ps1) of
 		false -> undefined;
 		{Eval, _} -> 
-		    erlang:display({error_emacs_eval, Eval}),
+		    %% erlang:display({error_emacs_eval, Eval}),
 		    Eval
 	    end
     end.
