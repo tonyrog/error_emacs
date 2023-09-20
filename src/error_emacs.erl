@@ -40,12 +40,11 @@
 	  pid      %% eval pid
 	}).
 
-%% -define(dbg(F,A), io:format("~s:~w: debug: "++(F)++"\n",[?MODULE,?LINE|(A)])).
+%%-define(dbg(F,A), io:format("~s:~w: debug: "++(F)++"\n",[?MODULE,?LINE|(A)])).
 -define(dbg(F,A), ok).
 %%-define(info(F,A), io:format("~s:~w: info: "++(F)++"\n",[?MODULE,?LINE|(A)])).
 -define(info(F,A), ok).
 
--export([get_links/1]).
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -286,43 +285,26 @@ launch_emacs(File, Line) ->
     ok.
 
 link_eval(State) ->
-    case whereis_evaluator() of
+    case shell:whereis() of
 	undefined ->
 	    Tmr = erlang:start_timer(1000, self(), find_shell_eval),
 	    State#state { timer = Tmr, pid = undefined };
-	EvalPid ->
-	    ?dbg("link to ~p", [EvalPid]),
-	    link(EvalPid),
-	    State#state{ timer = undefined, pid = EvalPid }
-    end.
-
-whereis_evaluator() ->
-    try shell:whereis_evaluator() of
-	Pid ->
-	    Pid
-    catch
-	error:_ ->
-	    Ps1 = get_links(group:whereis_shell()),
-	    %% erlang:display({ps1,Ps1}),
-	    case lists:keyfind(shell, 2, Ps1) of
-		false -> undefined;
-		{Eval, _} -> 
-		    %% erlang:display({error_emacs_eval, Eval}),
-		    Eval
+	Shell ->
+	    ?dbg("Shell = ~p\n", [Shell]),
+	    {links, Ls} = process_info(Shell, links),
+	    ?dbg("Links = ~p\n", [Ls]),
+	    MPs = [begin
+		       {_,{M,_F,_A}} = process_info(P, current_function),
+		       {M, P}
+		   end || P <- Ls],
+	    ?dbg("MPs = ~p\n", [MPs]),
+	    case lists:keyfind(shell, 1, MPs) of
+		false -> 
+		    Tmr = erlang:start_timer(1000, self(), find_shell_eval),
+		    State#state { timer = Tmr, pid = undefined };
+		{_, EvalPid} ->
+		    ?dbg("link to ~p", [EvalPid]),
+		    link(EvalPid),
+		    State#state{ timer = undefined, pid = EvalPid }
 	    end
-    end.
-
-get_links(Pid) ->
-    case process_info(Pid, links) of
-	{links,Ls} ->
-	    lists:foldl(
-	      fun(P, Acc) ->
-		      try process_info(P, current_function) of
-			  {current_function,{Mod,_,_}} -> [{P, Mod}|Acc]
-		      catch
-			  error:_ -> Acc
-		      end
-	      end, [], Ls);
-	_ -> 
-	    []
     end.
